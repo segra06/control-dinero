@@ -1,21 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, Checkbox, Form, Input, message, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
-
-const validUsername = 'sebastian';
-const validPassword = '12345';
+import { supabase } from './supabase';
 
 const App = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [errorMessage, setErrorMessage] = useState('');
 
-  const onFinish = (values) => {
-    if (values.username === validUsername && values.password === validPassword) {
+  const onFinish = async (values) => {
+    const { data: user, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('nombre', values.username) // Asegúrate de que 'nombre' es el nombre correcto de la columna
+      .eq('contraseña', values.password) // Asegúrate de que 'contraseña' es el nombre correcto de la columna
+      .single();
+
+    if (error || !user) {
+      setErrorMessage('¡Nombre de usuario o contraseña incorrectos!');
+    } else {
+      console.log('Usuario:', user);
       message.success('¡Bienvenido!');
       navigate('/dashboard');
-    } else {
-      setErrorMessage('Que menso');
     }
   };
 
@@ -26,8 +32,8 @@ const App = () => {
   return (
     <>
       <Typography.Title level={2} style={{ textAlign: 'center' }}>Finanzas</Typography.Title>
-      <div style={{ display: 'flex', justifyContent: 'center' }}> {/* Contenedor para centrar */}
-        <div style={{ marginLeft: '0px', marginTop: '50px' }}> {/* Ajusta el valor de marginLeft según sea necesario */}
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{ marginLeft: '0px', marginTop: '50px' }}>
           <Form
             form={form}
             name="basic"
@@ -74,7 +80,7 @@ const App = () => {
               {errorMessage}
             </div>
           )}
-          <div style={{ marginTop: '10px', textAlign: 'center' }}> {/* Ajusta el valor de marginTop según sea necesario */}
+          <div style={{ marginTop: '10px', textAlign: 'center' }}>
             <Button type="primary" style={{ width: '100%' }} onClick={() => form.submit()}>
               Iniciar sesión
             </Button>
