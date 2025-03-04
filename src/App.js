@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button, Checkbox, Form, Input, message, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabase';
@@ -9,15 +9,13 @@ const App = () => {
   const [errorMessage, setErrorMessage] = useState('');
 
   const onFinish = async (values) => {
-    const { data: user, error } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('nombre', values.username) // Asegúrate de que 'nombre' es el nombre correcto de la columna
-      .eq('contraseña', values.password) // Asegúrate de que 'contraseña' es el nombre correcto de la columna
-      .single();
+    const { user, error } = await supabase.auth.signInWithPassword({
+      email: values.email,
+      password: values.password,
+    });
 
-    if (error || !user) {
-      setErrorMessage('¡Nombre de usuario o contraseña incorrectos!');
+    if (error) {
+      setErrorMessage('¡Correo electrónico o contraseña incorrectos!');
     } else {
       console.log('Usuario:', user);
       message.success('¡Bienvenido!');
@@ -46,12 +44,16 @@ const App = () => {
             autoComplete="off"
           >
             <Form.Item
-              label="Username"
-              name="username"
+              label="Correo Electrónico"
+              name="email"
               rules={[
                 {
                   required: true,
-                  message: '¡Por favor ingrese su nombre de usuario!',
+                  message: '¡Por favor ingrese su correo electrónico!',
+                },
+                {
+                  type: 'email',
+                  message: '¡Por favor ingrese un correo electrónico válido!',
                 },
               ]}
             >
@@ -59,7 +61,7 @@ const App = () => {
             </Form.Item>
 
             <Form.Item
-              label="Password"
+              label="Contraseña"
               name="password"
               rules={[
                 {
