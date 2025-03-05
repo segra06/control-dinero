@@ -99,8 +99,8 @@
     margin: 0 20px; /* Espaciado a los lados para que no toque el borde */
   }
 
-  .ant-tabs-nav {
-    margin: 0; 
-    padding: 0;
-    width: 100%;
-  }
+.ant-tabs-nav {
+  margin: 0; 
+  padding: 0;
+  width: 100%;
+}
