@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button, Checkbox, Form, Input, message, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabase';
+import './global.css'; // Importa el archivo CSS global
 
 const App = () => {
   const navigate = useNavigate();
