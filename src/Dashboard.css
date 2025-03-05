@@ -1,0 +1,106 @@
+.progress-text {
+  font-size: 0.8em; /* Ajusta el tamaño de la fuente según sea necesario */
+  white-space: nowrap; /* Evita que el texto se divida en varias líneas */
+}
+
+.spin-container {
+  position: relative;
+  border: 4px solid rgba(1, 52, 110, 0.5); /* Ajusta el grosor y el color del "carril" con opacidad */
+  border-radius: 50%; /* Hace que el borde sea circular */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.ant-progress-circle .ant-progress-bg {
+  animation: rotate 10s linear infinite; /* Ajusta la duración de la animación para hacerla más lenta */
+  position: relative;
+}
+
+.ant-progress-circle .ant-progress-bg::before,
+.ant-progress-circle .ant-progress-bg::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 10000px; /* Ajusta el grosor de las líneas */
+  background-color: #000; /* Color de las líneas */
+  transform-origin: center left;
+}
+
+.ant-progress-circle .ant-progress-bg::before {
+  transform: rotate(120deg);
+}
+
+.ant-progress-circle .ant-progress-bg::after {
+  transform: rotate(240deg);
+}
+
+.ant-progress-circle .ant-progress-text {
+  animation: none; /* Evita que el texto rote */
+  position: absolute; /* Asegura que el texto no se mueva con el círculo */
+  top: 50%; /* Centra el texto verticalmente */
+  left: 50%; /* Centra el texto horizontalmente */
+  transform: translate(-50%, -50%); /* Ajusta la posición del texto */
+}
+
+.ant-spin-dot {
+  animation: rotate 20s linear infinite; /* Ajusta la duración de la animación para hacerla más lenta */
+}
+
+.ant-spin-dot-item {
+  background-color: #01346E; /* Color del círculo giratorio */
+}
+
+.ant-tabs-tab {
+  color: white !important;
+  padding: 0 16px; /* Ajusta el padding de las palabras en la barra de pestañas */
+}
+
+.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: white !important;
+}
+
+.ant-tabs-tab-btn {
+  color: white !important;
+}
+
+.dashboard-container {
+  margin: 20px; /* Ajusta el margen según tus necesidades */
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px; /* Ajusta el margen inferior según tus necesidades */
+}
+
+.ant-tabs-nav-wrap {
+    justify-content: center !important; /* Centra las pestañas */
+  }
+
+.tabs-container {
+  margin: 0 -20px; /* Ajusta el margen negativo para que la línea llegue a los bordes */
+}
+
+.tab-content {
+    padding: 20px; /* Ajusta según lo que se vea mejor */
+    margin: 0 20px; /* Espaciado a los lados para que no toque el borde */
+  }
+
+.ant-tabs-nav {
+  margin: 0; 
+  padding: 0;
+  width: 100%;
+}
