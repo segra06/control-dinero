@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Tabs, Spin, Menu, Dropdown, Button, Modal, Input, Form } from 'antd';
+import { Tabs, Spin, Dropdown, Button, Form, notification } from 'antd';
 import { LoadingOutlined, DownOutlined } from '@ant-design/icons';
 import { supabase } from '../utils/supabaseClient';
+import CrearCuentaModal from '../components/CrearCuentaModal';
+import TransaccionModal from '../components/TransaccionModal';
 import '../pages/Dashboard.js';
 
 const Dashboard = () => {
@@ -10,54 +12,63 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [transactionModalVisible, setTransactionModalVisible] = useState(false);
+  const [transactionConfirmLoading, setTransactionConfirmLoading] = useState(false);
+  const [selectedCuenta, setSelectedCuenta] = useState(null);
   const [form] = Form.useForm();
+  const [transactionForm] = Form.useForm();
 
   useEffect(() => {
     const fetchUserAndCuentas = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-      if (error || !session) {
-        console.error('Error fetching session:', error);
-        return;
-      }
+        if (error || !session) {
+          console.error('Error fetching session:', error);
+          return;
+        }
 
-      const user = session.user;
-      if (user) {
-        const { data: userData, error: userDataError } = await supabase
-          .from('usuarios')
-          .select('*')
-          .eq('mail', user.email)
-          .single();
+        const user = session.user;
+        if (user) {
+          const { data: userData, error: userDataError } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('mail', user.email)
+            .single();
 
-        if (userDataError) {
-          console.error('Error fetching user data:', userDataError);
-        } else {
-          setUser(userData);
-
-          const { data: cuentaUsuarios, error: cuentaUsuariosError } = await supabase
-            .from('cuenta_usuarios')
-            .select('cuenta_id')
-            .eq('usuario_id', userData.id);
-
-          if (cuentaUsuariosError) {
-            console.error('Error fetching cuenta_usuarios data:', cuentaUsuariosError);
+          if (userDataError) {
+            console.error('Error fetching user data:', userDataError);
           } else {
-            const cuentaIds = cuentaUsuarios.map(cuentaUsuario => cuentaUsuario.cuenta_id);
+            setUser(userData);
 
-            const { data: cuentasData, error: cuentasDataError } = await supabase
-              .from('cuentas')
-              .select('id, nombre, saldo')
-              .in('id', cuentaIds);
+            const { data: cuentaUsuarios, error: cuentaUsuariosError } = await supabase
+              .from('cuenta_usuarios')
+              .select('cuenta_id')
+              .eq('usuario_id', userData.id);
 
-            if (cuentasDataError) {
-              console.error('Error fetching cuentas data:', cuentasDataError);
+            if (cuentaUsuariosError) {
+              console.error('Error fetching cuenta_usuarios data:', cuentaUsuariosError);
             } else {
-              setCuentas(cuentasData);
+              const cuentaIds = cuentaUsuarios.map(cuentaUsuario => cuentaUsuario.cuenta_id);
+
+              const { data: cuentasData, error: cuentasDataError } = await supabase
+                .from('cuentas')
+                .select('id, nombre, saldo')
+                .in('id', cuentaIds);
+
+              if (cuentasDataError) {
+                console.error('Error fetching cuentas data:', cuentasDataError);
+              } else {
+                setCuentas(cuentasData);
+              }
             }
           }
         }
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching user and cuentas:', error);
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchUserAndCuentas();
@@ -109,11 +120,77 @@ const Dashboard = () => {
       form.resetFields();
     } catch (error) {
       console.error('Failed to create account:', error);
+      setConfirmLoading(false);
     }
   };
 
   const handleCancel = () => {
     setModalVisible(false);
+  };
+
+  const showTransactionModal = (cuenta) => {
+    setSelectedCuenta(cuenta);
+    setTransactionModalVisible(true);
+  };
+
+  const handleTransactionOk = async () => {
+    try {
+      const values = await transactionForm.validateFields();
+      setTransactionConfirmLoading(true);
+
+      if (values.tipo === 'egreso' && values.monto > selectedCuenta.saldo) {
+        notification.error({
+          message: 'Error de Transacción',
+          description: 'Saldo insuficiente para realizar esta transacción.',
+        });
+        setTransactionConfirmLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.rpc('agregar_transaccion', {
+        p_cuenta_id: selectedCuenta.id,
+        p_tipo: values.tipo,
+        p_monto: values.monto,
+        p_descripcion: values.descripcion
+      });
+
+      if (error) {
+        console.error('Error adding transaction:', error);
+      } else {
+        const { data: cuentaUsuarios, error: cuentaUsuariosError } = await supabase
+          .from('cuenta_usuarios')
+          .select('cuenta_id')
+          .eq('usuario_id', user.id);
+
+        if (cuentaUsuariosError) {
+          console.error('Error fetching cuenta_usuarios data:', cuentaUsuariosError);
+        } else {
+          const cuentaIds = cuentaUsuarios.map(cuentaUsuario => cuentaUsuario.cuenta_id);
+
+          const { data: cuentasData, error: cuentasDataError } = await supabase
+            .from('cuentas')
+            .select('id, nombre, saldo')
+            .in('id', cuentaIds);
+
+          if (cuentasDataError) {
+            console.error('Error fetching cuentas data:', cuentasDataError);
+          } else {
+            setCuentas(cuentasData);
+          }
+        }
+      }
+
+      setTransactionModalVisible(false);
+      setTransactionConfirmLoading(false);
+      transactionForm.resetFields();
+    } catch (error) {
+      console.error('Failed to add transaction:', error);
+      setTransactionConfirmLoading(false);
+    }
+  };
+
+  const handleTransactionCancel = () => {
+    setTransactionModalVisible(false);
   };
 
   if (loading) {
@@ -130,13 +207,18 @@ const Dashboard = () => {
       key: cuenta.id.toString(),
       label: cuenta.nombre,
       children: (
-        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', height: size }}>
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: size }}>
           <div className="spin-container" style={{ width: size, height: size }}>
             <Spin indicator={antIcon} />
           </div>
           <span className="progress-text" style={{ position: 'absolute', fontSize: `${fontSize}px`, color: 'black' }}>
             ₡{cuenta.saldo.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
           </span>
+          <div style={{ marginTop: '20px' }}>
+            <Button type="primary" onClick={() => showTransactionModal(cuenta)}>
+              Ingresar/Egresar dinero
+            </Button>
+          </div>
         </div>
       ),
     };
@@ -145,10 +227,11 @@ const Dashboard = () => {
   const menu = {
     items: [
       { key: '1', label: 'Crear cuenta', onClick: showModal },
-      { key: '2', label: 'Configuraciones' },
-      { key: '3', label: 'Datos de la cuenta' },
-      { key: '4', label: 'Acerca de' },
-      { key: '5', label: 'Cerrar sesión' },
+      { key: '2', label: 'Ingresar/Egresar dinero', onClick: showTransactionModal },
+      { key: '3', label: 'Configuraciones' },
+      { key: '4', label: 'Datos de la cuenta' },
+      { key: '5', label: 'Acerca de' },
+      { key: '6', label: 'Cerrar sesión' },
     ],
   };
 
@@ -175,30 +258,21 @@ const Dashboard = () => {
           </div>
         </>
       )}
-      <Modal
-        title="Crear nueva cuenta"
-        open={modalVisible}
+      <CrearCuentaModal
+        visible={modalVisible}
         onOk={handleOk}
         confirmLoading={confirmLoading}
         onCancel={handleCancel}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="nombre"
-            label="Nombre de la cuenta"
-            rules={[{ required: true, message: 'Por favor ingrese el nombre de la cuenta' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="saldo"
-            label="Saldo inicial"
-            rules={[{ required: true, message: 'Por favor ingrese el saldo inicial' }]}
-          >
-            <Input type="number" />
-          </Form.Item>
-        </Form>
-      </Modal>
+        form={form}
+      />
+      <TransaccionModal
+        visible={transactionModalVisible}
+        onOk={handleTransactionOk}
+        confirmLoading={transactionConfirmLoading}
+        onCancel={handleTransactionCancel}
+        form={transactionForm}
+        cuenta={selectedCuenta}
+      />
     </div>
   );
 };
