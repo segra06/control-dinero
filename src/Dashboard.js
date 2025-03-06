@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tabs, Spin, Menu, Dropdown, Button } from 'antd';
+import { Tabs, Spin, Menu, Dropdown, Button, Modal, Input, Form } from 'antd';
 import { LoadingOutlined, DownOutlined } from '@ant-design/icons';
 import { supabase } from './supabase';
 import './Dashboard.css'; // Importa el archivo CSS
@@ -8,6 +8,9 @@ const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [cuentas, setCuentas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [form] = Form.useForm();
 
   useEffect(() => {
     const fetchUserAndCuentas = async () => {
@@ -67,6 +70,61 @@ const Dashboard = () => {
     fetchUserAndCuentas();
   }, []);
 
+  const showModal = () => {
+    setModalVisible(true);
+  };
+
+  const handleOk = async () => {
+    try {
+      const values = await form.validateFields();
+      setConfirmLoading(true);
+
+      // Llama a la función para crear una nueva cuenta
+      const { error } = await supabase.rpc('crear_cuenta_usuario', {
+        p_nombre: values.nombre,
+        p_saldo: values.saldo,
+        p_usuario_id: user.id
+      });
+
+      if (error) {
+        console.error('Error creating account:', error);
+      } else {
+        // Actualiza las cuentas después de crear una nueva cuenta
+        const { data: cuentaUsuarios, error: cuentaUsuariosError } = await supabase
+          .from('cuenta_usuarios')
+          .select('cuenta_id')
+          .eq('usuario_id', user.id);
+
+        if (cuentaUsuariosError) {
+          console.error('Error fetching cuenta_usuarios data:', cuentaUsuariosError);
+        } else {
+          const cuentaIds = cuentaUsuarios.map(cuentaUsuario => cuentaUsuario.cuenta_id);
+
+          const { data: cuentasData, error: cuentasDataError } = await supabase
+            .from('cuentas')
+            .select('id, nombre, saldo')
+            .in('id', cuentaIds);
+
+          if (cuentasDataError) {
+            console.error('Error fetching cuentas data:', cuentasDataError);
+          } else {
+            setCuentas(cuentasData);
+          }
+        }
+      }
+
+      setModalVisible(false);
+      setConfirmLoading(false);
+      form.resetFields();
+    } catch (error) {
+      console.error('Failed to create account:', error);
+    }
+  };
+
+  const handleCancel = () => {
+    setModalVisible(false);
+  };
+
   if (loading) {
     return <div>Cargando...</div>;
   }
@@ -95,7 +153,7 @@ const Dashboard = () => {
 
   const menu = (
     <Menu>
-      <Menu.Item key="1">Crear cuenta</Menu.Item>
+      <Menu.Item key="1" onClick={showModal}>Crear cuenta</Menu.Item>
       <Menu.Item key="2">Configuraciones</Menu.Item>
       <Menu.Item key="3">Datos de la cuenta</Menu.Item>
       <Menu.Item key="4">Acerca de</Menu.Item>
@@ -112,7 +170,6 @@ const Dashboard = () => {
       </Dropdown>
     </div>
   );
-  
 
   return (
     <div className="dashboard-container">
@@ -133,6 +190,30 @@ const Dashboard = () => {
           </div>
         </>
       )}
+      <Modal
+        title="Crear nueva cuenta"
+        visible={modalVisible}
+        onOk={handleOk}
+        confirmLoading={confirmLoading}
+        onCancel={handleCancel}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="nombre"
+            label="Nombre de la cuenta"
+            rules={[{ required: true, message: 'Por favor ingrese el nombre de la cuenta' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="saldo"
+            label="Saldo inicial"
+            rules={[{ required: true, message: 'Por favor ingrese el saldo inicial' }]}
+          >
+            <Input type="number" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
