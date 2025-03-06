@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, Spin, Menu, Dropdown, Button, Modal, Input, Form } from 'antd';
 import { LoadingOutlined, DownOutlined } from '@ant-design/icons';
-import { supabase } from './supabase';
-import './Dashboard.css'; // Importa el archivo CSS
+import { supabase } from '../utils/supabaseClient';
+import '../pages/Dashboard.js';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -14,7 +14,6 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchUserAndCuentas = async () => {
-      // Obtén la sesión actual
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error || !session) {
@@ -22,15 +21,12 @@ const Dashboard = () => {
         return;
       }
 
-      // Obtén el usuario autenticado desde la sesión
       const user = session.user;
-
       if (user) {
-        // Realiza la consulta para obtener la información del usuario en la tabla 'usuarios'
         const { data: userData, error: userDataError } = await supabase
           .from('usuarios')
           .select('*')
-          .eq('mail', user.email) // Utiliza la columna correcta 'mail' en lugar de 'email'
+          .eq('mail', user.email)
           .single();
 
         if (userDataError) {
@@ -38,7 +34,6 @@ const Dashboard = () => {
         } else {
           setUser(userData);
 
-          // Realiza la consulta para obtener las cuentas asociadas al usuario
           const { data: cuentaUsuarios, error: cuentaUsuariosError } = await supabase
             .from('cuenta_usuarios')
             .select('cuenta_id')
@@ -49,7 +44,6 @@ const Dashboard = () => {
           } else {
             const cuentaIds = cuentaUsuarios.map(cuentaUsuario => cuentaUsuario.cuenta_id);
 
-            // Realiza la consulta para obtener los nombres y saldos de las cuentas
             const { data: cuentasData, error: cuentasDataError } = await supabase
               .from('cuentas')
               .select('id, nombre, saldo')
@@ -63,7 +57,6 @@ const Dashboard = () => {
           }
         }
       }
-
       setLoading(false);
     };
 
@@ -79,7 +72,6 @@ const Dashboard = () => {
       const values = await form.validateFields();
       setConfirmLoading(true);
 
-      // Llama a la función para crear una nueva cuenta
       const { error } = await supabase.rpc('crear_cuenta_usuario', {
         p_nombre: values.nombre,
         p_saldo: values.saldo,
@@ -89,7 +81,6 @@ const Dashboard = () => {
       if (error) {
         console.error('Error creating account:', error);
       } else {
-        // Actualiza las cuentas después de crear una nueva cuenta
         const { data: cuentaUsuarios, error: cuentaUsuariosError } = await supabase
           .from('cuenta_usuarios')
           .select('cuenta_id')
@@ -130,8 +121,8 @@ const Dashboard = () => {
   }
 
   const items = cuentas.map((cuenta) => {
-    const size = Math.min(200, Math.max(100, cuenta.saldo / 5)); // Ajusta el tamaño del círculo en función del saldo
-    const fontSize = Math.min(24, Math.max(16, cuenta.saldo.toString().length * 2)); // Ajusta el tamaño de la fuente en función del saldo
+    const size = Math.min(200, Math.max(100, cuenta.saldo / 5));
+    const fontSize = Math.min(24, Math.max(16, cuenta.saldo.toString().length * 2));
 
     const antIcon = <LoadingOutlined style={{ fontSize: size, color: '#01346E', animationDuration: '3s' }} spin />;
 
@@ -151,19 +142,19 @@ const Dashboard = () => {
     };
   });
 
-  const menu = (
-    <Menu>
-      <Menu.Item key="1" onClick={showModal}>Crear cuenta</Menu.Item>
-      <Menu.Item key="2">Configuraciones</Menu.Item>
-      <Menu.Item key="3">Datos de la cuenta</Menu.Item>
-      <Menu.Item key="4">Acerca de</Menu.Item>
-      <Menu.Item key="5">Cerrar sesión</Menu.Item>
-    </Menu>
-  );
+  const menu = {
+    items: [
+      { key: '1', label: 'Crear cuenta', onClick: showModal },
+      { key: '2', label: 'Configuraciones' },
+      { key: '3', label: 'Datos de la cuenta' },
+      { key: '4', label: 'Acerca de' },
+      { key: '5', label: 'Cerrar sesión' },
+    ],
+  };
 
   const operations = (
     <div style={{ marginRight: 'auto', paddingLeft: '16px' }}>
-      <Dropdown overlay={menu}>
+      <Dropdown menu={menu}>
         <Button>
           ||| <DownOutlined />
         </Button>
@@ -180,19 +171,13 @@ const Dashboard = () => {
             <span>Bienvenido, {user.nombre}</span>
           </div>
           <div className="tabs-container">
-            <Tabs tabBarExtraContent={{ left: operations }} defaultActiveKey="1" items={items} tabBarStyle={{ backgroundColor: '#01346E', color: 'white' }}>
-              <Tabs.TabPane tab="Tus Cuentas" key="1">
-                {items.map(item => (
-                  <div key={item.key} className="tab-content">{item.children}</div>
-                ))}
-              </Tabs.TabPane>
-            </Tabs>
+            <Tabs tabBarExtraContent={{ left: operations }} defaultActiveKey="1" items={items} tabBarStyle={{ backgroundColor: '#01346E', color: 'white' }} />
           </div>
         </>
       )}
       <Modal
         title="Crear nueva cuenta"
-        visible={modalVisible}
+        open={modalVisible}
         onOk={handleOk}
         confirmLoading={confirmLoading}
         onCancel={handleCancel}
