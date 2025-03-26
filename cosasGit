@@ -44,8 +44,8 @@
     - `alias.{shortcut}`
 - `git config --list --show-origin`: Lista la configuración actual
 
-- `git config --global user.name "Leonardo Camacho"`
-- `git config --global user.email leocamachocr@gmail.com`
+- `git config --global user.name "Sebastián Granados"`
+- `git config --global user.email sebasgranados@gmail.com`
 
 // usa el editor code por defecto y espera hasta que el editor se cierre
 `git config --global core.editor "code --wait"` // Esto es opcional
